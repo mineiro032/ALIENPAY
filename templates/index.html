@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Controle</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f4f8;
+        }
+        header {
+            background: #007bff;
+            color: #fff;
+            padding: 15px 20px;
+            text-align: center;
+        }
+        h1 {
+            margin: 0;
+        }
+        .container {
+            display: flex;
+            margin: 20px;
+        }
+        .sidebar {
+            width: 250px;
+            background: #fff;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        .sidebar h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+        .sidebar a {
+            display: block;
+            margin: 10px 0;
+            text-decoration: none;
+            color: #007bff;
+            padding: 10px;
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+        .sidebar a:hover {
+            background: #f1f1f1;
+        }
+        .content {
+            flex-grow: 1;
+            padding: 20px;
+            background: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            margin-left: 20px;
+        }
+        footer {
+            text-align: center;
+            margin-top: 20px;
+            padding: 10px;
+            background: #007bff;
+            color: #fff;
+            position: relative;
+            bottom: 0;
+            width: 100%;
+        }
+        canvas {
+            max-width: 100%;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .alert {
+            padding: 15px;
+            margin: 10px 0;
+            border: 1px solid #007bff;
+            border-radius: 5px;
+            background-color: #e7f4ff;
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>ALIEN PAY</h1>
+    </header>
+    <div class="container">
+        <div class="sidebar">
+            <h2>Menu</h2>
+            <a href="/configurar_bot">Configurar Bot Telegram</a>
+            <a href="/produtos">Gerenciar Produtos</a>
+            <a href="/mensagens">Editar Mensagens</a>
+            <a href="/integracoes">Integrações</a> <!-- Nova opção de Integrações -->
+        </div>
+        <div class="content">
+            {% if message %}
+                <div class="alert">{{ message }}</div>
+            {% endif %}
+            <h2>Gráficos e Estatísticas</h2>
+            <canvas id="productChart" width="400" height="200"></canvas>
+            <canvas id="salesChart" width="400" height="200"></canvas>
+            <h2>Editar Mensagens de Produtos</h2>
+            <form onsubmit="addProduct(event)">
+                <input type="text" name="product_message" placeholder="Digite o nome do produto" required>
+                <input type="submit" value="Adicionar Produto">
+            </form>
+            <h2>Lista de Produtos:</h2>
+            <ul id="product-list">
+                {% for product in messages %}
+                    <li>{{ product }}</li>
+                {% endfor %}
+            </ul>
+            <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+            <script>
+                const ctxProduct = document.getElementById('productChart').getContext('2d');
+                const productChart = new Chart(ctxProduct, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Produto 1', 'Produto 2', 'Produto 3'],
+                        datasets: [{
+                            label: 'Vendas de Produtos',
+                            data: [12, 19, 3],
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.2)',
+                                'rgba(54, 162, 235, 0.2)',
+                                'rgba(255, 206, 86, 0.2)'
+                            ],
+                            borderColor: [
+                                'rgba(255, 99, 132, 1)',
+                                'rgba(54, 162, 235, 1)',
+                                'rgba(255, 206, 86, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+
+                const ctxSales = document.getElementById('salesChart').getContext('2d');
+                const salesChart = new Chart(ctxSales, {
+                    type: 'line',
+                    data: {
+                        labels: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho'],
+                        datasets: [{
+                            label: 'Vendas Totais',
+                            data: [300, 500, 400, 600, 700, 800],
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+
+                async function addProduct(event) {
+                    event.preventDefault(); // Impede o envio padrão do formulário
+                    const formData = new FormData(event.target);
+                    const response = await fetch('/mensagens', {
+                        method: 'POST',
+                        body: formData,
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        // Atualiza a lista de produtos na página
+                        const productList = document.getElementById('product-list');
+                        productList.innerHTML = ''; // Limpa a lista atual
+                        result.messages.forEach(product => {
+                            const li = document.createElement('li');
+                            li.textContent = product;
+                            productList.appendChild(li);
+                        });
+                    }
+                }
+            </script>
+        </div>
+    </div>
+    <footer>
+        <p>&copy; 2024 Seu Nome ou Sua Empresa</p>
+    </footer>
+</body>
+</html>
